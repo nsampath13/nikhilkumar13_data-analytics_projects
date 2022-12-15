@@ -1,0 +1,156 @@
+---
+title: "Transportation Model"
+output:
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+***Formulating Transportation Problem Using R***
+\vspace{3mm}
+
+*Activating all the required packages*
+```{r}
+library("lpSolveAPI")
+library("lpSolve")
+library("tinytex")
+```
+\vspace{3mm}
+
+*Creating a table for better understanding of the data*
+```{r}
+cost <- matrix(c(22,14,30,600,100,
+                 16,20,24,625,120,
+                 80,60,70,"-","-"), ncol=5,byrow=T)
+
+colnames(cost) <- c("Warehouse1", "Warehouse2", "Warehouse3", "ProductionCost", "ProductionCapacity")
+
+rownames(cost) <- c("PlantA", "PlantB", "Demand")
+
+cost <- as.table(cost)
+cost
+
+```  
+\vspace{5mm}
+
+***The Objective Function is to Minimize the Transportation cost***
+
+$$ Z = 622X_{11} + 614X_{12} + 630X_{13} + 0X_{14} + 641X_{21} + 645X_{22} + 649X_{23} + 0X_{24}$$
+\vspace{2mm}
+
+***Subject to the following constraints***
+\vspace{1mm}
+
+$${\text Supply \hspace{2mm} Constraints}$$
+$$X_{11} + X_{12} + X_{13} + X_{14} <= 100$$
+$$X_{21} + X_{22} + X_{23} + X_{24} <= 120$$
+\vspace{2mm}
+$${\text Demand \hspace{2mm} Constraints}$$
+$$X_{11} + X_{21}>= 80$$
+$$X_{12} + X_{22}>= 60$$
+$$X_{13} + X_{23}>= 70$$
+$$X_{14} + X_{24}>= 10$$
+\vspace{2mm}
+$${\text  Non - Negativity \hspace{2mm} Constraints} $$
+$$X_{ij} >= 0 \hspace{4mm} \text {Where i = 1,2 and j = 1,2,3,4} $$
+
+
+```{r}
+#Since demand is not equal to supply creating dummy variables 
+
+#Creating a matrix for the given objective function
+trans.cost <- matrix(c(622,614,630,0,
+                 641,645,649,0), ncol=4, byrow=T)
+trans.cost
+
+#Defining the column names and row names
+colnames(trans.cost) <- c("Warehouse1", "Warehouse2", "Warehouse3", "Dummy")
+
+rownames(trans.cost) <- c("PlantA", "PlantB")
+
+trans.cost
+  
+#Defining the row signs and row values 
+row.signs <- rep("<=",2)
+row.rhs <- c(100,120)
+#Since it's supply function it cannot be greater than the specified units.
+
+#Defining the column signs and column values
+col.signs <- rep(">=",4)
+col.rhs <- c(80,60,70,10)
+#Since it's demand function it can be greater than the specified units.
+
+#Running the lp.transport function 
+lptrans.cost <- lp.transport(trans.cost,"min", row.signs,row.rhs,col.signs,col.rhs)
+```
+
+```{r}
+#Getting the objective value
+lptrans.cost$objval
+```
+\vspace{2mm}
+*The minimization value so obtained is* ***$132,790*** *which is the minimal combined cost thereby attained from the combined cost of production and shipping the defibrilators.*
+
+```{r}
+#Getting the constraints value
+lptrans.cost$solution
+```
+\vspace{2mm}
+***80 AEDs*** *in Plant B - Warehouse1*\vspace{1mm}\newline
+***60 AEDs*** *in Plant A - Warehouse2*\vspace{1mm}\newline
+***40 AEDs*** *in Plant A - Warehouse3*\vspace{1mm}\newline
+***30 AEDs*** *in Plant B - Warehouse3*\hspace{1mm}*should be produced in each plant and then distributed to each of the three wholesaler warehouses in order to minimize the overall cost of production as well as shipping.*
+\vspace{4mm}\newline
+
+***Formulate the dual of the above transportation problem***
+\vspace{1mm}\newline
+
+*Since the primal was to minimize the transportation cost the dual of it would be to maximize the value added(VA).*
+
+$$ {\text Maximize \hspace{3mm} VA = } \hspace{3mm} 80W_1 + 60W_2 + 70W_3 - 100P_A - 120P_B$$
+\vspace{1mm}\newline
+***Subject to the following constraints***
+
+$$ {\text Total \hspace{2mm} Payments \hspace{2mm} Constraints} $$
+$$ W_1 - P_A >= 622 $$
+$$ W_2 - P_A >= 614$$
+$$ W_3 - P_A >= 630$$
+$$ W_1 - P_B >= 641$$
+$$ W_2 - P_B >= 645$$
+$$ W_3 - P_B >= 649$$
+\newline
+$${\text Where \hspace{2mm} W_1 = Warehouse \hspace{2mm} 1}$$
+$$\hspace{2mm} W_2 = Warehouse \hspace{2mm} 2$$
+$$\hspace{2mm} W_3 = Warehouse \hspace{2mm} 3$$
+$$\hspace{2mm} P_1 = Plant \hspace{2mm} 1$$
+$$\hspace{2mm} P_2 = Plant \hspace{2mm} 2$$
+\newline
+***Economic Interpretation of the dual***
+$$W_1 <= 622 + P_A $$
+$$W_2 <= 614 + P_A $$
+$$W_3 <= 630 + P_A $$
+$$W_1 <= 641 + P_B$$
+$$W_2 <= 645 + P_B$$
+$$W_3 <= 649 + P_B$$
+\newline
+$$ \text From \hspace{3mm} the \hspace{3mm} above \hspace{3mm} we \hspace{3mm} get \hspace{3mm} to \hspace{3mm} see \hspace{3mm} that \hspace{3mm} W_1 - P_A >= 622$$
+\newline
+$$ that \hspace{3mm} can \hspace{3mm} be \hspace{3mm} exponented \hspace{3mm} as \hspace{3mm} W_1 >= 622 + P_A$$
+\newline
+$$ \text Here \hspace{3mm} W_1 \hspace{3mm} is \hspace{3mm} considered \hspace{3mm} as \hspace{3mm} the \hspace{3mm} price \hspace{3mm} payments \hspace{3mm} being \hspace{3mm} received \hspace{3mm} at \hspace{3mm} the \hspace{3mm} origin \hspace{3mm} which \hspace{3mm} is \hspace{3mm} nothing \hspace{3mm} else, \hspace{3mm}$$ 
+$$\text but \hspace{3mm} the \hspace{3mm} revenue,\hspace{3mm} whereas\hspace{3mm} P_A + 622 \hspace{3mm} is \hspace{3mm} the \hspace{3mm} money \hspace{3mm} paid \hspace{3mm} at \hspace{3mm} the \hspace{3mm} origin \hspace{3mm} at \hspace{3mm} Plant_A \hspace{3mm}$$
+\newline
+$$\text Therefore \hspace{3mm} the \hspace{3mm} equation \hspace{3mm} turns, \hspace{3mm} out\hspace{3mm} to\hspace{3mm} be \hspace{3mm} MR_1 >= MC_1.$$
+\newline
+$$\text For \hspace{3mm} a \hspace{3mm} profit \hspace{3mm} maximization, \hspace{3mm} The \hspace{3mm} Marginal \hspace{3mm} Revenue (MR)\hspace{3mm} should \hspace{3mm}be \hspace{3mm}equal\hspace{3mm} to\hspace{3mm} Marginal\hspace{3mm} Costs(MC)$$
+\newline
+$$ \text Therefore,\hspace{3mm}
+MR_1 = MC_1$$
+\newline
+$$\text Based \hspace{3mm} on\hspace{3mm} above\hspace{3mm} interpretation,\hspace{3mm} we\hspace{3mm} can\hspace{3mm} conclude\hspace{3mm} that,$$
+$$\text Profit\hspace{3mm} maximization\hspace{3mm} takes\hspace{3mm} place \hspace{3mm} if\hspace{3mm} MC\hspace{3mm} is\hspace{3mm} equal\hspace{3mm} to\hspace{3mm} MR.$$
+\newline
+***If MR < MC, in order to meet the Marginal Revenue (MR), we need to decrease the costs at the plants.***
+  
+  \vspace{1mm}
+***If MR > MC, in order to meet the Marginal Revenue (MR), we need to increase the production supply.***
